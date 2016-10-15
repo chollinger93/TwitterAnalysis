@@ -36,7 +36,7 @@ public class Main {
             throw new IOException("No config path provided!");
         configPath = args[0];
         // TODO remove
-        configPath = "/Users/christian/IdeaProjects/TwitterAnalysis/src/main/resources/auth.properties";
+        //configPath = "/Users/christian/IdeaProjects/TwitterAnalysis/src/main/resources/auth.properties";
         logger.info("Config path: "+configPath);
 
         // Heron specific settings
