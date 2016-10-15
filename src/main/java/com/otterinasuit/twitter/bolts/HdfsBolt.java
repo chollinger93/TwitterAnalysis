@@ -54,6 +54,7 @@ public class HdfsBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
+        if(true) return;
         for(Object o : tuple.getValues()){
             try {
                 recOutputWriter.writeChars((String) o);

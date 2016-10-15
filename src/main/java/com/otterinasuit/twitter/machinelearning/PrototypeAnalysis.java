@@ -1,11 +1,11 @@
 package com.otterinasuit.twitter.machinelearning;
 
-import com.otterinasuit.twitter.objects.TweetResult;
 import com.otterinasuit.twitter.helper.TweetUtil;
+import com.otterinasuit.twitter.objects.Tweet;
+import com.otterinasuit.twitter.objects.TweetResult;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import twitter4j.Status;
 
 import java.util.List;
 import java.util.Map;
@@ -13,12 +13,12 @@ import java.util.Map;
 public class PrototypeAnalysis {
     private final String configPath;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-    private Status tweet;
+    private Tweet tweet;
     private List<String> words;
     private double scoring;
     private TweetScoring tweetScoring;
 
-    public PrototypeAnalysis(Status tweet, String configPath){
+    public PrototypeAnalysis(Tweet tweet, String configPath){
         this.tweet = tweet;
         this.configPath = configPath;
         this.tweetScoring = new TweetScoring(tweet);

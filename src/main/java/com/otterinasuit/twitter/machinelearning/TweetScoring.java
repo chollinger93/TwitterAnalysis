@@ -1,12 +1,12 @@
 package com.otterinasuit.twitter.machinelearning;
 
+import com.otterinasuit.twitter.objects.Tweet;
 import org.apache.commons.lang.StringUtils;
-import twitter4j.Status;
 
 public class TweetScoring {
-    private Status tweet;
+    private Tweet tweet;
     private double scoring = 0.0D;
-    public TweetScoring(Status tweet) {
+    public TweetScoring(Tweet tweet) {
         this.tweet = tweet;
     }
 
@@ -32,7 +32,7 @@ public class TweetScoring {
     }
 
     private boolean isAmerican() {
-        return (tweet.getPlace() != null && !StringUtils.isEmpty(tweet.getPlace().getCountry())
-                && tweet.getPlace().getCountry().equals("United States"));
+        return (tweet.getPlace() != null && !StringUtils.isEmpty(tweet.getPlace())
+                && tweet.getPlace().equals("United States"));
     }
 }

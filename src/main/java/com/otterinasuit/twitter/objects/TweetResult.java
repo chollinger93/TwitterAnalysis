@@ -2,7 +2,6 @@ package com.otterinasuit.twitter.objects;
 
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
-import twitter4j.Status;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -13,9 +12,9 @@ public class TweetResult implements Serializable {
     private double democratsScore = 0.0D;
     private double scoring;
     private double difference;
-    private Status tweet;
+    private Tweet tweet;
 
-    public TweetResult(double repulicanScore, double democratsScore, double scoring, Status tweet) {
+    public TweetResult(double repulicanScore, double democratsScore, double scoring, Tweet tweet) {
         this.repulicanScore = repulicanScore;
         this.democratsScore = democratsScore;
         this.tweet = tweet;
@@ -56,11 +55,11 @@ public class TweetResult implements Serializable {
         this.democratsScore = democratsScore;
     }
 
-    public Status getTweet() {
+    public Tweet getTweet() {
         return tweet;
     }
 
-    public void setTweet(Status tweet) {
+    public void setTweet(Tweet tweet) {
         this.tweet = tweet;
     }
 
@@ -80,8 +79,8 @@ public class TweetResult implements Serializable {
                 ", democratsScore=" + democratsScore +
                 ", scoring=" + scoring +
                 ", difference=" + difference +
-                ", tweeter=" + tweet.getUser().getName() +
-                ", lang=" + tweet.getUser().getLang() +
+                ", tweeter=" + tweet.getUserName() +
+                ", lang=" + tweet.getLang() +
                 ", tweet=" + tweet.getText() +
                 '}';
     }
@@ -106,7 +105,7 @@ public class TweetResult implements Serializable {
     }
 
     private byte[] getKey(){
-        return Bytes.toBytes(this.getTweet().getUser().getName()+"_"+new Date().getTime());
+        return Bytes.toBytes(this.getTweet().getUserName()+"_"+new Date().getTime());
     }
 
 }

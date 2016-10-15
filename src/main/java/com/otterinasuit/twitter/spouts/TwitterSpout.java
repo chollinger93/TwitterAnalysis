@@ -1,6 +1,8 @@
 package com.otterinasuit.twitter.spouts;
 
 import com.otterinasuit.twitter.helper.PropertyHelper;
+import com.otterinasuit.twitter.objects.Tweet;
+import org.apache.commons.lang.StringUtils;
 import org.apache.storm.Config;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -8,7 +10,6 @@ import org.apache.storm.topology.IRichSpout;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
-import org.apache.storm.utils.Utils;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
 
@@ -106,9 +107,17 @@ public class TwitterSpout implements IRichSpout {
     public void nextTuple() {
         final Status status = queue.poll();
         if (status == null) {
-            Utils.sleep(50);
+            //Utils.sleep(50);
         } else {
-            collector.emit(new Values(status));
+            Tweet tweet = new Tweet(status.getUser().getId(), status.getId(), status.getUser().getName(), status.getUser().getScreenName(), status.getText(),
+                    status.getUser().getDescription(), status.getLang());
+            if(status.getPlace() != null && !StringUtils.isEmpty(status.getPlace().getCountry())) tweet.setPlace(status.getPlace().getCountry());
+            tweet.setFavorited(status.isFavorited());
+            tweet.setFavoriteCount(status.getFavoriteCount());
+            tweet.setRetweet(status.isRetweet());
+            tweet.setRetweetCount(status.getRetweetCount());
+            final Values values = new Values(tweet);
+            collector.emit(values);
         }
     }
 

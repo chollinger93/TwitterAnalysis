@@ -2,6 +2,7 @@ package com.otterinasuit.twitter;
 
 import com.otterinasuit.twitter.bolts.AnalysisBolt;
 import com.otterinasuit.twitter.bolts.HdfsBolt;
+import com.otterinasuit.twitter.objects.Tweet;
 import com.otterinasuit.twitter.objects.TweetResult;
 import com.otterinasuit.twitter.spouts.TwitterSpout;
 import org.apache.commons.lang.StringUtils;
@@ -11,18 +12,11 @@ import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
-import org.apache.storm.utils.Utils;
-import org.reflections.Reflections;
-import org.reflections.scanners.SubTypesScanner;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import twitter4j.Status;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Set;
 
 public class Main {
     private static Logger logger = LoggerFactory.getLogger(Main.class);
@@ -36,16 +30,14 @@ public class Main {
             throw new IOException("No config path provided!");
         configPath = args[0];
         // TODO remove
-        //configPath = "/Users/christian/IdeaProjects/TwitterAnalysis/src/main/resources/auth.properties";
+        configPath = "/Users/christian/IdeaProjects/TwitterAnalysis/src/main/resources/auth.properties";
         logger.info("Config path: "+configPath);
 
         // Heron specific settings
         /*
          * TODO: These don't work properly atm
          * Storm uses the twitter4j Status ("Tweet"), but Heron cannot serialize these
-         */
-        conf.registerSerialization(Status.class);
-        conf.registerSerialization(TweetResult.class);
+
         Reflections reflections = new Reflections(new ConfigurationBuilder()
                 .setUrls(ClasspathHelper.forPackage("twitter4j"))
                 .setScanners(new SubTypesScanner(false)));
@@ -53,6 +45,9 @@ public class Main {
         for (Class c : types) {
             conf.registerSerialization(c.getClass());
         }
+        */
+        conf.registerSerialization(TweetResult.class);
+        conf.registerSerialization(Tweet.class);
 
         TopologyBuilder builder = new TopologyBuilder();
         builder.setSpout("twitterSpout", new TwitterSpout(configPath), 2);
@@ -97,22 +92,24 @@ public class Main {
          builder.setBolt("kafkaWal", kafka, 5)
          .shuffleGrouping("twitterSpout");
          */
-        conf.setDebug(false);
+        conf.setDebug(true);
         conf.setNumWorkers(3);
-        LocalCluster cluster = new LocalCluster();
-        if (args.length > 2) {
+        LocalCluster cluster = null;
+        conf.put("cmdline.topologydefn.tmpdirectory", "/tmp/heron");
+        if (args.length > 1) {
+            cluster = new LocalCluster();
             logger.info("Debug mode!");
             cluster.submitTopology("TwitterAnalysis", conf, builder.createTopology());
         } else {
             logger.info("Cluster mode!");
             StormSubmitter.submitTopology("TwitterAnalysis", conf, builder.createTopology());
         }
-        if (args.length > 2) {
-            Utils.sleep(30 * 1000);
-            Date end = new Date();
-            logger.info("Total runtime: " + (end.getTime() - start.getTime()));
-            cluster.killTopology("TwitterAnalysis");
-            cluster.shutdown();
+        if (args.length > 1) {
+            //Utils.sleep(30 * 1000);
+            //Date end = new Date();
+            //logger.info("Total runtime: " + (end.getTime() - start.getTime()));
+            //cluster.killTopology("TwitterAnalysis");
+            //cluster.shutdown();
         }
     }
 
