@@ -40,6 +40,10 @@ public class Main {
         logger.info("Config path: "+configPath);
 
         // Heron specific settings
+        /*
+         * TODO: These don't work properly atm
+         * Storm uses the twitter4j Status ("Tweet"), but Heron cannot serialize these
+         */
         conf.registerSerialization(Status.class);
         conf.registerSerialization(TweetResult.class);
         Reflections reflections = new Reflections(new ConfigurationBuilder()
