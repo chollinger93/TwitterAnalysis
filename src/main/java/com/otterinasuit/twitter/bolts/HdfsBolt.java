@@ -13,9 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Map;
 
+/**
+ * Simple, heron-compatible, yet very (!) inefficient storm-hdfs implementation
+ * Proof of concept!
+ * TODO: merge storm-hdfs
+ */
 public class HdfsBolt extends BaseRichBolt {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private OutputCollector collector;
@@ -26,13 +30,6 @@ public class HdfsBolt extends BaseRichBolt {
     protected transient FSDataOutputStream recOutputWriter = null;
     protected transient Configuration hdfsConfig;
 
-    /**
-     * Simple, heron-compatible, yet inefficient storm-hdfs implementation
-     *
-     * @param path
-     * @throws IOException
-     * @throws URISyntaxException
-     */
     public HdfsBolt(String path) {
         this.path = path;
     }
@@ -71,7 +68,9 @@ public class HdfsBolt extends BaseRichBolt {
             for (Object o : tuple.getValues()) {
 
                 if (o != null) {
-                    recOutputWriter.writeChars((String) o);
+                    String col = (String) o;
+                    logger.debug("Writing col: "+col);
+                    recOutputWriter.writeChars(col);
                 }
                 recOutputWriter.writeChars(separator);
             }

@@ -1,5 +1,7 @@
 target/*
 auth.properties
+config.properties
+hbase-site.xml
 *.iml
 .idea/*
-hbase-site.xml
+dependency-reduced-pom.xml

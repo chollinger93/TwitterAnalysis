@@ -1,6 +1,7 @@
 package com.otterinasuit.twitter.bolts;
 
 import com.otterinasuit.twitter.machinelearning.PrototypeAnalysis;
+import com.otterinasuit.twitter.machinelearning.TweetScoring;
 import com.otterinasuit.twitter.objects.Tweet;
 import com.otterinasuit.twitter.objects.TweetResult;
 import org.apache.storm.task.OutputCollector;
@@ -39,7 +40,7 @@ public class HBaseBoltTest {
         Tweet status = mock(Tweet.class);
         when(status.getText()).thenReturn("Make America great again! #MAGMA");
         when(status.getUserDescription()).thenReturn("Patriotic American");
-        PrototypeAnalysis proto = new PrototypeAnalysis(status, "src/resources/main/auth.properties");
+        PrototypeAnalysis proto = new PrototypeAnalysis(status, "src/resources/main/auth.properties", new TweetScoring());
         when(status.getLang()).thenReturn("en");
         TweetResult result = proto.election();
         when(tuple.getValue(1)).thenReturn(result);

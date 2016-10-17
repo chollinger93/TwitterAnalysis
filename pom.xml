@@ -28,7 +28,7 @@
         </profile>
     </profiles>
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/org.apache.storm/storm-core
+        <!-- Disabled for Heron
         <dependency>
             <groupId>org.apache.storm</groupId>
             <artifactId>storm-core</artifactId>
@@ -103,7 +103,6 @@
             <version>2.7.3</version>
         </dependency>
 
-
         <!-- Twitter4j -->
         <dependency>
             <groupId>org.twitter4j</groupId>
@@ -135,7 +134,6 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.4</version>
         </dependency>
-
         <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>

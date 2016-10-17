@@ -1,6 +1,6 @@
 package com.otterinasuit.twitter.machinelearning;
 
-import com.otterinasuit.twitter.objects.Parties;
+import com.otterinasuit.twitter.helper.PropertyHelper;
 import com.otterinasuit.twitter.objects.Tweet;
 import com.otterinasuit.twitter.objects.TweetResult;
 import org.junit.Test;
@@ -21,10 +21,10 @@ public class PrototypeAnalysisTest {
         when(user.getDescription()).thenReturn("Patriotic American");
         when(status.getUserDescription()).thenReturn("Patriotic American");
 
-        PrototypeAnalysis proto = new PrototypeAnalysis(status, "src/main/resources/auth.properties");
+        PrototypeAnalysis proto = new PrototypeAnalysis(status, "src/main/resources/auth.properties", new TweetScoring());
         TweetResult result = proto.election();
-
-        assert(result.getParty().equals(Parties.REPUBLICANS));
+        String party = PropertyHelper.getInstance("src/main/resources/config.properties").getOptionN(1);
+        assert(result.getParty().equals(party));
     }
 
 }

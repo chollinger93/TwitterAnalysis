@@ -20,6 +20,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * Simple HBase bolt implementation as alternative to the hdfs bolt
+ */
 public class HBaseBolt extends BaseRichBolt{
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     OutputCollector collector;

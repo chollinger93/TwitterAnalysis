@@ -19,7 +19,7 @@ public class AnalysisBoltTest {
         // Wordcount from twitter to prepare the model
         try {
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
-            Properties properties = PropertyHelper.readConfig("src/resources/auth.properties");
+            Properties properties = PropertyHelper.getInstance("src/resources/auth.properties").getProperties();
             configurationBuilder.setOAuthConsumerKey(properties.getProperty("consumerKey"))
                     .setOAuthConsumerSecret(properties.getProperty("consumerSecret"))
                     .setOAuthAccessToken(properties.getProperty("accessToken"))

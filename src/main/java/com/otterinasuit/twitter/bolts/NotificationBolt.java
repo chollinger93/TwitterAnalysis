@@ -8,6 +8,9 @@ import org.apache.storm.tuple.Tuple;
 
 import java.util.Map;
 
+/**
+ * Bolt for illustrating backpressure simulating a delay
+ */
 public class NotificationBolt extends BaseRichBolt{
     OutputCollector collector;
     @Override
@@ -25,6 +28,7 @@ public class NotificationBolt extends BaseRichBolt{
         } catch (InterruptedException e) {
             e.printStackTrace();
             collector.reportError(e);
+            collector.fail(tuple);
         }
     }
 

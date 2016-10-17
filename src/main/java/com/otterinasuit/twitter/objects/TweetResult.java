@@ -1,5 +1,6 @@
 package com.otterinasuit.twitter.objects;
 
+import com.otterinasuit.twitter.helper.PropertyHelper;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -7,52 +8,50 @@ import java.io.Serializable;
 import java.util.Date;
 
 public class TweetResult implements Serializable {
-    private Parties party;
-    private double repulicanScore = 0.0D;
-    private double democratsScore = 0.0D;
+    private final String party;
+    private double score1 = 0.0D;
+    private double score2 = 0.0D;
     private double scoring;
     private double difference;
     private Tweet tweet;
+    private final String configPath;
 
-    public TweetResult(double repulicanScore, double democratsScore, double scoring, Tweet tweet) {
-        this.repulicanScore = repulicanScore;
-        this.democratsScore = democratsScore;
+    public TweetResult(double score1, double score2, double scoring, Tweet tweet, String configPath) {
+        this.score1 = score1;
+        this.score2 = score2;
         this.tweet = tweet;
         this.scoring = scoring;
-        this.difference = Math.abs(repulicanScore - democratsScore);
-        if(repulicanScore > democratsScore) {
-            this.party = Parties.REPUBLICANS;
-        } else if(repulicanScore < democratsScore){
-            this.party = Parties.DEMOCRATS;
+        this.configPath = configPath;
+        this.difference = Math.abs(score1 - score2);
+        if(score1 > score2) {
+            this.party = PropertyHelper.getInstance(configPath).getOptionN(1);
+        } else if(score1 < score2){
+            this.party = PropertyHelper.getInstance(configPath).getOptionN(2);
         }else if(difference <= .5D){
-            this.party = Parties.UNSURE;
+            this.party = PropertyHelper.getInstance(configPath).getOptionN(0);
         } else {
-            this.party = Parties.UNSURE;
+            this.party = PropertyHelper.getInstance(configPath).getOptionN(0);
         }
     }
 
-    public Parties getParty() {
+    public String getParty() {
         return party;
     }
 
-    public void setParty(Parties party) {
-        this.party = party;
+    public double getScore1() {
+        return score1;
     }
 
-    public double getRepulicanScore() {
-        return repulicanScore;
+    public void setScore1(double score1) {
+        this.score1 = score1;
     }
 
-    public void setRepulicanScore(double repulicanScore) {
-        this.repulicanScore = repulicanScore;
+    public double getScore2() {
+        return score2;
     }
 
-    public double getDemocratsScore() {
-        return democratsScore;
-    }
-
-    public void setDemocratsScore(double democratsScore) {
-        this.democratsScore = democratsScore;
+    public void setScore2(double score2) {
+        this.score2 = score2;
     }
 
     public Tweet getTweet() {
@@ -75,8 +74,8 @@ public class TweetResult implements Serializable {
     public String toString() {
         return "TweetResult{" +
                 "party=" + party +
-                ", repulicanScore=" + repulicanScore +
-                ", democratsScore=" + democratsScore +
+                ", score1=" + score1 +
+                ", score2=" + score2 +
                 ", scoring=" + scoring +
                 ", difference=" + difference +
                 ", tweeter=" + tweet.getUserName() +
@@ -87,9 +86,9 @@ public class TweetResult implements Serializable {
 
     public Put getHbaseStatement(){
         String cf;
-        if(this.party.equals(Parties.DEMOCRATS)) {
+        if(this.party.equals(PropertyHelper.getInstance(configPath).getOptionN(1))) {
             cf = "df";
-        } else if(this.party.equals(Parties.REPUBLICANS)){
+        } else if(this.party.equals(PropertyHelper.getInstance(configPath).getOptionN(2))) {
             cf = "rf";
         } else {
             cf = "uf";
@@ -97,8 +96,8 @@ public class TweetResult implements Serializable {
 
         return new Put(getKey())
                 .addColumn(Bytes.toBytes(cf), Bytes.toBytes("party"), Bytes.toBytes(party.toString()))
-                .addColumn(Bytes.toBytes(cf), Bytes.toBytes("repulicanScore"), Bytes.toBytes(repulicanScore))
-                .addColumn(Bytes.toBytes(cf), Bytes.toBytes("democratsScore"), Bytes.toBytes(democratsScore))
+                .addColumn(Bytes.toBytes(cf), Bytes.toBytes("score1"), Bytes.toBytes(score1))
+                .addColumn(Bytes.toBytes(cf), Bytes.toBytes("score2"), Bytes.toBytes(score2))
                 .addColumn(Bytes.toBytes(cf), Bytes.toBytes("scoring"), Bytes.toBytes(scoring))
                 .addColumn(Bytes.toBytes(cf), Bytes.toBytes("difference"), Bytes.toBytes(difference))
                 .addColumn(Bytes.toBytes(cf), Bytes.toBytes("tweet"), Bytes.toBytes(tweet.getText()));

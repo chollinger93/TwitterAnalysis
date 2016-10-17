@@ -7,6 +7,7 @@ import com.otterinasuit.twitter.objects.TweetResult;
 import com.otterinasuit.twitter.spouts.TwitterSpout;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.Config;
+import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
@@ -22,14 +23,11 @@ public class Main {
     public static void main(String[] args) throws Exception {
         Date start = new Date();
         Config conf = new Config();
-        String configPath;
-        boolean isHeron = false;
+        String configPath = args[0];
+
         if (args == null || args.length < 1 || StringUtils.isEmpty(args[0]))
             throw new IOException("No config path provided!");
-        configPath = args[0];
-        // TODO remove
-        configPath = "/Users/christian/IdeaProjects/TwitterAnalysis/src/main/resources/auth.properties";
-        logger.info("Config path: " + configPath);
+
 
         // Heron specific settings
         /*
@@ -44,6 +42,7 @@ public class Main {
             conf.registerSerialization(c.getClass());
         }
         */
+        // Register custom classes we will move over as tuples
         conf.registerSerialization(TweetResult.class);
         conf.registerSerialization(Tweet.class);
 
@@ -58,7 +57,7 @@ public class Main {
                         .withSeparator("|"), 1)
                 .fieldsGrouping("AnalysisBolt", new Fields("party"));
 
-        // Not compatible with Heron!
+        // Not compatible with Heron yet!
         /**
          RecordFormat format = new DelimitedRecordFormat()
          .withFieldDelimiter("|");
@@ -80,30 +79,21 @@ public class Main {
 
          builder.setBolt("HdfsBolt", hdfsBolt, 2)
          .fieldsGrouping("AnalysisBolt", new Fields("party"));
-         /**
-
-         builder.setBolt("NotificationBolt", new AnalysisBolt(), 5)
-         .fieldsGrouping("AnalysisBolt", new Fields("word"));
-
-         KafkaBolt kafka = new KafkaBolt()
-         .withTopicSelector(new DefaultTopicSelector("test"))
-         .withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper());
-         builder.setBolt("kafkaWal", kafka, 5)
-         .shuffleGrouping("twitterSpout");
          */
+
+
         conf.setDebug(true);
         conf.setNumWorkers(3);
-        /*
+
         LocalCluster cluster = null;
-        if (args.length > 1) {
+        if (args.length > 1 && args[1].equals("debug")) {
             cluster = new LocalCluster();
             logger.info("Debug mode!");
             cluster.submitTopology("TwitterAnalysis", conf, builder.createTopology());
         } else {
-        */
             logger.info("Cluster mode!");
             StormSubmitter.submitTopology("TwitterAnalysis", conf, builder.createTopology());
-        //}
+        }
     }
 
 }

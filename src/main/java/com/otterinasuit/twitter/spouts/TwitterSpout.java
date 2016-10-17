@@ -1,6 +1,7 @@
 package com.otterinasuit.twitter.spouts;
 
 import com.otterinasuit.twitter.helper.PropertyHelper;
+import com.otterinasuit.twitter.helper.TweetUtil;
 import com.otterinasuit.twitter.objects.Tweet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.Config;
@@ -13,8 +14,8 @@ import org.apache.storm.tuple.Values;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
 
+import java.io.IOException;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class TwitterSpout implements IRichSpout {
@@ -27,19 +28,13 @@ public class TwitterSpout implements IRichSpout {
 
     private SpoutOutputCollector collector;
 
-    public TwitterSpout(String configPath){
+    public TwitterSpout(String configPath) {
         this.configPath = configPath;
     }
 
     @Override
     public void open(Map map, TopologyContext topologyContext, SpoutOutputCollector spoutOutputCollector) {
-        ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
-        logger.info("Loading config: "+configPath);
-        Properties properties = PropertyHelper.readConfig(configPath);
-        configurationBuilder.setOAuthConsumerKey(properties.getProperty("consumerKey"))
-                .setOAuthConsumerSecret(properties.getProperty("consumerSecret"))
-                .setOAuthAccessToken(properties.getProperty("accessToken"))
-                .setOAuthAccessTokenSecret(properties.getProperty("accessTokenSecret"));
+        ConfigurationBuilder configurationBuilder = TweetUtil.auth(configPath+"/auth.properties");
 
         twitterStream = new TwitterStreamFactory(configurationBuilder.build()).getInstance();
 
@@ -82,7 +77,15 @@ public class TwitterSpout implements IRichSpout {
         //to find trends for
         final FilterQuery query = new FilterQuery();
         //topics
-        query.track("#MAGA", "#AmericaFirst", "America", "Vote", "US", "Election", "Trump", "Hillary", "Clinton");
+        String topics = PropertyHelper.getInstance(configPath+"/config.properties").getProperties()
+                .getProperty("seed.keywords");
+        if(StringUtils.isEmpty(topics)){
+            logger.error("seed.keywords are missing, cannot init spout!");
+            spoutOutputCollector.reportError(new IOException("seed.keywords missing!"));
+            return;
+        }
+        String[] _topics = StringUtils.split(topics, ',');
+        query.track(_topics);
 
         twitterStream.filter(query);
     }
@@ -109,9 +112,11 @@ public class TwitterSpout implements IRichSpout {
         if (status == null) {
             //Utils.sleep(50);
         } else {
+            // Overwrite twitter4j, as it cannot by kryo'd
             Tweet tweet = new Tweet(status.getUser().getId(), status.getId(), status.getUser().getName(), status.getUser().getScreenName(), status.getText(),
                     status.getUser().getDescription(), status.getLang());
-            if(status.getPlace() != null && !StringUtils.isEmpty(status.getPlace().getCountry())) tweet.setPlace(status.getPlace().getCountry());
+            if (status.getPlace() != null && !StringUtils.isEmpty(status.getPlace().getCountry()))
+                tweet.setPlace(status.getPlace().getCountry());
             tweet.setFavorited(status.isFavorited());
             tweet.setFavoriteCount(status.getFavoriteCount());
             tweet.setRetweet(status.isRetweet());
