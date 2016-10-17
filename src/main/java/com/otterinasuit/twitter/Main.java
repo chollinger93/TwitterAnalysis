@@ -6,9 +6,7 @@ import com.otterinasuit.twitter.objects.Tweet;
 import com.otterinasuit.twitter.objects.TweetResult;
 import com.otterinasuit.twitter.spouts.TwitterSpout;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.storm.Config;
-import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
@@ -31,7 +29,7 @@ public class Main {
         configPath = args[0];
         // TODO remove
         configPath = "/Users/christian/IdeaProjects/TwitterAnalysis/src/main/resources/auth.properties";
-        logger.info("Config path: "+configPath);
+        logger.info("Config path: " + configPath);
 
         // Heron specific settings
         /*
@@ -54,8 +52,9 @@ public class Main {
         builder.setBolt("AnalysisBolt", new AnalysisBolt(configPath), 5)
                 .shuffleGrouping("twitterSpout");
 
+
         builder.setBolt("HdfsBolt",
-                new HdfsBolt("hdfs://localhost:9000/results/results.txt", new Configuration())
+                new HdfsBolt("hdfs://localhost:9000/results/data.txt")
                         .withSeparator("|"), 1)
                 .fieldsGrouping("AnalysisBolt", new Fields("party"));
 
@@ -70,18 +69,18 @@ public class Main {
          // Use default, Storm-generated file names
          FileNameFormat fileNameFormat = new HdfsFileFormat();
 
-        // Instantiate the HdfsBolt
-        HdfsBolt hdfsBolt = new HdfsBolt()
-                .withFsUrl("hdfs://localhost:9000")
-                .withFileNameFormat(fileNameFormat)
-                .withRecordFormat(format)
-                .withRotationPolicy(rotationPolicy)
-                .withSyncPolicy(syncPolicy);
+         // Instantiate the HdfsBolt
+         HdfsBolt hdfsBolt = new HdfsBolt()
+         .withFsUrl("hdfs://localhost:9000")
+         .withFileNameFormat(fileNameFormat)
+         .withRecordFormat(format)
+         .withRotationPolicy(rotationPolicy)
+         .withSyncPolicy(syncPolicy);
 
 
-        builder.setBolt("HdfsBolt", hdfsBolt, 2)
-                .fieldsGrouping("AnalysisBolt", new Fields("party"));
-
+         builder.setBolt("HdfsBolt", hdfsBolt, 2)
+         .fieldsGrouping("AnalysisBolt", new Fields("party"));
+         /**
 
          builder.setBolt("NotificationBolt", new AnalysisBolt(), 5)
          .fieldsGrouping("AnalysisBolt", new Fields("word"));
@@ -94,23 +93,17 @@ public class Main {
          */
         conf.setDebug(true);
         conf.setNumWorkers(3);
+        /*
         LocalCluster cluster = null;
-        conf.put("cmdline.topologydefn.tmpdirectory", "/tmp/heron");
         if (args.length > 1) {
             cluster = new LocalCluster();
             logger.info("Debug mode!");
             cluster.submitTopology("TwitterAnalysis", conf, builder.createTopology());
         } else {
+        */
             logger.info("Cluster mode!");
             StormSubmitter.submitTopology("TwitterAnalysis", conf, builder.createTopology());
-        }
-        if (args.length > 1) {
-            //Utils.sleep(30 * 1000);
-            //Date end = new Date();
-            //logger.info("Total runtime: " + (end.getTime() - start.getTime()));
-            //cluster.killTopology("TwitterAnalysis");
-            //cluster.shutdown();
-        }
+        //}
     }
 
 }

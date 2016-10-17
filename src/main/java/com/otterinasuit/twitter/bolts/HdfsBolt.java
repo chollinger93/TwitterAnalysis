@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 
@@ -27,22 +26,18 @@ public class HdfsBolt extends BaseRichBolt {
     protected transient FSDataOutputStream recOutputWriter = null;
     protected transient Configuration hdfsConfig;
 
-    public HdfsBolt(String path, Configuration hdfsConfig) throws IOException, URISyntaxException {
+    /**
+     * Simple, heron-compatible, yet inefficient storm-hdfs implementation
+     *
+     * @param path
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    public HdfsBolt(String path) {
         this.path = path;
-        this.hdfsConfig = hdfsConfig;
-        this.hdfsConfig.set("fs.hdfs.impl",
-                org.apache.hadoop.hdfs.DistributedFileSystem.class.getName()
-        );
-        this.hdfsConfig.set("fs.file.impl",
-                org.apache.hadoop.fs.LocalFileSystem.class.getName()
-        );
-        this.hdfsConfig.addResource(new Path("/opt/hadoop/hadoop-2.7.3/etc/hadoop/core-site.xml"));
-        fs = FileSystem.get(new URI("hdfs://localhost:9000"), this.hdfsConfig);
-        Path pathOut = new Path(path);
-        recOutputWriter = fs.create(pathOut);
     }
 
-    public HdfsBolt withSeparator(String separator){
+    public HdfsBolt withSeparator(String separator) {
         this.separator = separator;
         return this;
     }
@@ -50,21 +45,44 @@ public class HdfsBolt extends BaseRichBolt {
     @Override
     public void prepare(Map map, TopologyContext topologyContext, OutputCollector outputCollector) {
         this.collector = outputCollector;
+        this.hdfsConfig = new Configuration();
+        this.hdfsConfig.set("fs.hdfs.impl",
+                org.apache.hadoop.hdfs.DistributedFileSystem.class.getName()
+        );
+        this.hdfsConfig.set("fs.file.impl",
+                org.apache.hadoop.fs.LocalFileSystem.class.getName()
+        );
+        this.hdfsConfig.addResource(new Path("/opt/hadoop/hadoop-2.7.3/etc/hadoop/core-site.xml"));
+        this.hdfsConfig.set("fs.default.name", "hdfs://localhost:9000");
+
+        try {
+            fs = FileSystem.get(this.hdfsConfig);
+            Path pathOut = new Path(path);
+            recOutputWriter = fs.create(pathOut);
+        } catch (IOException e) {
+            collector.reportError(e);
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void execute(Tuple tuple) {
-        if(true) return;
-        for(Object o : tuple.getValues()){
-            try {
-                recOutputWriter.writeChars((String) o);
+        try {
+            for (Object o : tuple.getValues()) {
+
+                if (o != null) {
+                    recOutputWriter.writeChars((String) o);
+                }
                 recOutputWriter.writeChars(separator);
-                recOutputWriter.flush();
-            } catch (IOException e) {
-                collector.reportError(e);
-                e.printStackTrace();
             }
+            recOutputWriter.flush();
+        } catch (IOException e) {
+            collector.reportError(e);
+            e.printStackTrace();
+            collector.fail(tuple);
+            return;
         }
+        collector.ack(tuple);
     }
 
     @Override
