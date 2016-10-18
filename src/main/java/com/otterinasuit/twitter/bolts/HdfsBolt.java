@@ -49,7 +49,7 @@ public class HdfsBolt extends BaseRichBolt {
         this.hdfsConfig.set("fs.file.impl",
                 org.apache.hadoop.fs.LocalFileSystem.class.getName()
         );
-        this.hdfsConfig.addResource(new Path("/opt/hadoop/hadoop-2.7.3/etc/hadoop/core-site.xml"));
+        //this.hdfsConfig.addResource(new Path("/opt/hadoop/hadoop-2.7.3/etc/hadoop/core-site.xml"));
         this.hdfsConfig.set("fs.default.name", "hdfs://localhost:9000");
 
         try {

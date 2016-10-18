@@ -17,6 +17,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Date;
 
+/**
+ * Starting point
+ */
 public class Main {
     private static Logger logger = LoggerFactory.getLogger(Main.class);
 

@@ -1,5 +1,6 @@
 package com.otterinasuit.twitter.machinelearning;
 
+import com.otterinasuit.twitter.helper.PropertyHelper;
 import com.otterinasuit.twitter.helper.TweetUtil;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
@@ -7,6 +8,7 @@ import twitter4j.conf.ConfigurationBuilder;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -14,25 +16,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Lazy init via Singleton for every JVM - safes resources on getting the prototype tweets!
  * TODO: enable more than two candidates
  */
-public class PrototypeMachine implements Serializable{
+public class PrototypeMachine implements Serializable {
     private static PrototypeMachine _instance;
     private AtomicBoolean semaphore = new AtomicBoolean(false);
     private Map<String, Double> countMapPrototype2;
     private Map<String, Double> countMapPrototype1;
 
-    private PrototypeMachine(String authPath){
+    private PrototypeMachine(String authPath) {
         // Wordcount from twitter to prepare the model
         try {
-            ConfigurationBuilder configurationBuilder = TweetUtil.auth(authPath+"/auth.properties");
+            ConfigurationBuilder configurationBuilder = TweetUtil.auth(authPath + "/auth.properties");
             Twitter twitter = new TwitterFactory(configurationBuilder.build()).getInstance();
             Paging paging = new Paging(1, 400);
-            List<Status> hillaryStatuses = twitter.getUserTimeline("HillaryClinton", paging);
-            List<Status> trumpStatuses = twitter.getUserTimeline("realDonaldTrump", paging);
+            // Init seed users
+            Properties prop = PropertyHelper.getInstance(authPath + "/config.properties").getProperties();
+            List<Status> user1Status = twitter.getUserTimeline(prop.getProperty("seed.account1"), paging);
+            List<Status> user2Status = twitter.getUserTimeline(prop.getProperty("seed.account"), paging);
 
             Prototypical proto = new Prototypical();
 
-            this.setCountMapPrototype2(proto.getAnalysisForTweets(hillaryStatuses));
-            this.setCountMapPrototype1(proto.getAnalysisForTweets(trumpStatuses));
+            this.setCountMapPrototype2(proto.getAnalysisForTweets(user2Status));
+            this.setCountMapPrototype1(proto.getAnalysisForTweets(user1Status));
             this.setSemaphore(true);
 
         } catch (TwitterException e) {
@@ -42,18 +46,19 @@ public class PrototypeMachine implements Serializable{
 
     /**
      * Get instance
+     *
      * @param confPath to auth.properties directory
      * @return
      */
-    public static synchronized PrototypeMachine getInstance(String confPath){
-        if(_instance == null)
-         _instance = new PrototypeMachine(confPath);
+    public static synchronized PrototypeMachine getInstance(String confPath) {
+        if (_instance == null)
+            _instance = new PrototypeMachine(confPath);
 
         return _instance;
     }
 
-    public synchronized Map<String, Double>[] getProtoypes(){
-        if(getSemaphore() && !getCountMapPrototype1().isEmpty() && !getCountMapPrototype2().isEmpty()){
+    public synchronized Map<String, Double>[] getProtoypes() {
+        if (getSemaphore() && !getCountMapPrototype1().isEmpty() && !getCountMapPrototype2().isEmpty()) {
             Map[] mapper = {countMapPrototype1, countMapPrototype2};
             return mapper;
         }
@@ -62,10 +67,11 @@ public class PrototypeMachine implements Serializable{
 
     /**
      * Get first prototype
+     *
      * @return
      */
     public synchronized Map<String, Double> getCountMapPrototype1() {
-        if(getSemaphore() && !getCountMapPrototype1_2().isEmpty()){
+        if (getSemaphore() && !getCountMapPrototype1_2().isEmpty()) {
             return getCountMapPrototype1_2();
         }
         return null;
@@ -73,28 +79,29 @@ public class PrototypeMachine implements Serializable{
 
     /**
      * Get first prototype
+     *
      * @return
      */
     public synchronized Map<String, Double> getCountMapPrototype2() {
-        if(getSemaphore() && !getCountMapHillary2().isEmpty()){
-            return getCountMapHillary2();
+        if (getSemaphore() && !getCountMapPrototype2_2().isEmpty()) {
+            return getCountMapPrototype2_2();
         }
         return null;
     }
 
-    private synchronized Map<String, Double> getCountMapPrototype1_2(){
+    private synchronized Map<String, Double> getCountMapPrototype1_2() {
         return countMapPrototype1;
     }
 
-    private synchronized Map<String, Double> getCountMapHillary2(){
+    private synchronized Map<String, Double> getCountMapPrototype2_2() {
         return countMapPrototype2;
     }
 
-    public synchronized boolean getSemaphore(){
+    public synchronized boolean getSemaphore() {
         return semaphore.get();
     }
 
-    public synchronized void setSemaphore(boolean val){
+    public synchronized void setSemaphore(boolean val) {
         this.semaphore.set(val);
     }
 

@@ -35,7 +35,7 @@ public class PropertyHelper {
      * TODO: move to hdfs
      * @return Properties
      */
-    public Properties readConfig(){
+    private Properties readConfig(){
         prop = new Properties();
         InputStream input = null;
 
