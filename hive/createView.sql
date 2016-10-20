@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS test.party_hdfs(
 `tweet` string,
 )
 ROW FORMAT DELIMITED
-DELIMITED BY '|'
+DELIMITED BY ','
 STORED AS TEXTFILE
-LOCATION '/results/results.txt';
+LOCATION '/results/data_9';
 
 SELECT COUNT(*) FROM test.action_hdfs;

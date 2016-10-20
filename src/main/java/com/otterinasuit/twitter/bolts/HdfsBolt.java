@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Map;
 
 /**
@@ -24,17 +25,18 @@ public class HdfsBolt extends BaseRichBolt {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private OutputCollector collector;
 
-    private final String path;
-    private String separator = ",";
+    private String path;
+    private char[] separator = {0x01};
     protected transient FileSystem fs;
     protected transient FSDataOutputStream recOutputWriter = null;
     protected transient Configuration hdfsConfig;
+    protected transient PrintWriter writer;
 
     public HdfsBolt(String path) {
         this.path = path;
     }
 
-    public HdfsBolt withSeparator(String separator) {
+    public HdfsBolt withSeparator(char[] separator) {
         this.separator = separator;
         return this;
     }
@@ -52,10 +54,15 @@ public class HdfsBolt extends BaseRichBolt {
         //this.hdfsConfig.addResource(new Path("/opt/hadoop/hadoop-2.7.3/etc/hadoop/core-site.xml"));
         this.hdfsConfig.set("fs.default.name", "hdfs://localhost:9000");
 
+        // Create multiple files
+        path += "data_" + topologyContext.getThisTaskId();
+
         try {
             fs = FileSystem.get(this.hdfsConfig);
             Path pathOut = new Path(path);
-            recOutputWriter = fs.create(pathOut);
+            //recOutputWriter = fs.create(pathOut);
+            recOutputWriter = fs.append(pathOut);
+            writer = new PrintWriter(recOutputWriter);
         } catch (IOException e) {
             collector.reportError(e);
             e.printStackTrace();
@@ -66,14 +73,15 @@ public class HdfsBolt extends BaseRichBolt {
     public void execute(Tuple tuple) {
         try {
             for (Object o : tuple.getValues()) {
-
                 if (o != null) {
                     String col = (String) o;
                     logger.debug("Writing col: "+col);
-                    recOutputWriter.writeChars(col);
+                    writer.append(col);
                 }
-                recOutputWriter.writeChars(separator);
+                writer.write(separator);
             }
+            writer.write("\n");
+            writer.flush();
             recOutputWriter.flush();
         } catch (IOException e) {
             collector.reportError(e);

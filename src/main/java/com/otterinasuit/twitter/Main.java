@@ -2,6 +2,7 @@ package com.otterinasuit.twitter;
 
 import com.otterinasuit.twitter.bolts.AnalysisBolt;
 import com.otterinasuit.twitter.bolts.HdfsBolt;
+import com.otterinasuit.twitter.helper.PropertyHelper;
 import com.otterinasuit.twitter.objects.Tweet;
 import com.otterinasuit.twitter.objects.TweetResult;
 import com.otterinasuit.twitter.spouts.TwitterSpout;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.Properties;
 
 /**
  * Starting point
@@ -27,9 +29,10 @@ public class Main {
         Date start = new Date();
         Config conf = new Config();
         String configPath = args[0];
+        configPath = (configPath.endsWith("/")) ? configPath.substring(0, configPath.length()-1) : configPath;
 
         if (args == null || args.length < 1 || StringUtils.isEmpty(args[0]))
-            throw new IOException("No config path provided!");
+            throw new IOException("Usage: TwitterAnalysis.jar path/to/auth/and/conf/properties");
 
 
         // Heron specific settings
@@ -49,15 +52,23 @@ public class Main {
         conf.registerSerialization(TweetResult.class);
         conf.registerSerialization(Tweet.class);
 
+        // Create topology
+        Properties prop = PropertyHelper.getInstance(configPath+"/config.properties").getProperties();
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setSpout("twitterSpout", new TwitterSpout(configPath), 2);
-        builder.setBolt("AnalysisBolt", new AnalysisBolt(configPath), 5)
+        int numSpouts = Integer.parseInt(prop.getProperty("topology.spouts", "1"));
+        int numAnalysis = Integer.parseInt(prop.getProperty("topology.analysis", "1"));
+        int numHdfs = Integer.parseInt(prop.getProperty("topology.hdfs", "1"));
+        builder.setSpout("twitterSpout",
+                new TwitterSpout(configPath),
+                numSpouts);
+        builder.setBolt("AnalysisBolt",
+                new AnalysisBolt(configPath),
+                numAnalysis)
                 .shuffleGrouping("twitterSpout");
-
-
         builder.setBolt("HdfsBolt",
-                new HdfsBolt("hdfs://localhost:9000/results/data.txt")
-                        .withSeparator("|"), 1)
+                new HdfsBolt(prop.getProperty("hdfs.path"))
+                        .withSeparator(new char[]{0x01}),
+                numHdfs)
                 .fieldsGrouping("AnalysisBolt", new Fields("party"));
 
         // Not compatible with Heron yet!
@@ -86,7 +97,8 @@ public class Main {
 
 
         conf.setDebug(true);
-        conf.setNumWorkers(3);
+        conf.setNumWorkers(Integer.parseInt(
+                prop.getProperty("topology.workers", "1")));
 
         LocalCluster cluster = null;
         if (args.length > 1 && args[1].equals("debug")) {

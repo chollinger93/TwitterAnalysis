@@ -31,7 +31,7 @@ public class PrototypeMachine implements Serializable {
             // Init seed users
             Properties prop = PropertyHelper.getInstance(authPath + "/config.properties").getProperties();
             List<Status> user1Status = twitter.getUserTimeline(prop.getProperty("seed.account1"), paging);
-            List<Status> user2Status = twitter.getUserTimeline(prop.getProperty("seed.account"), paging);
+            List<Status> user2Status = twitter.getUserTimeline(prop.getProperty("seed.account2"), paging);
 
             Prototypical proto = new Prototypical();
 
