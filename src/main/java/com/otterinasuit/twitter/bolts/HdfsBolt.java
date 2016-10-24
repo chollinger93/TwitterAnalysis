@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -55,14 +56,17 @@ public class HdfsBolt extends BaseRichBolt {
         this.hdfsConfig.set("fs.default.name", "hdfs://localhost:9000");
 
         // Create multiple files
-        path += "data_" + topologyContext.getThisTaskId();
+        path += "data_" + topologyContext.getThisTaskId()+"_"+new Date().getTime();
 
         try {
             fs = FileSystem.get(this.hdfsConfig);
             Path pathOut = new Path(path);
             if (!fs.exists(pathOut)) {
                 recOutputWriter = fs.create(pathOut);
+                recOutputWriter.flush();
+                recOutputWriter.close();
             }
+
             recOutputWriter = fs.append(pathOut);
 
             writer = new PrintWriter(recOutputWriter);
@@ -75,6 +79,7 @@ public class HdfsBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
+        logger.info("Received tuple in HDFS!");
         try {
             for (Object o : tuple.getValues()) {
                 if (o != null) {
@@ -88,7 +93,7 @@ public class HdfsBolt extends BaseRichBolt {
             }
             writer.write("\n");
             writer.flush();
-            //recOutputWriter.flush();
+            recOutputWriter.flush();
         } catch (Exception e) {
             collector.reportError(e);
             e.printStackTrace();

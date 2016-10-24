@@ -13,7 +13,6 @@ import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.topology.TopologyBuilder;
-import org.apache.storm.tuple.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +33,7 @@ public class Main {
         configPath = (configPath.endsWith("/")) ? configPath.substring(0, configPath.length() - 1) : configPath;
 
         if (args == null || args.length < 1 || StringUtils.isEmpty(args[0]))
-            throw new IOException("Usage: TwitterAnalysis.jar path/to/auth/and/conf/properties");
+            throw new IOException("Usage: TwitterAnalysis.jar path/to/auth/and/conf/properties name");
 
 
         // Heron specific settings
@@ -59,31 +58,31 @@ public class Main {
         TopologyBuilder builder = new TopologyBuilder();
         int numSpouts = Integer.parseInt(prop.getProperty("topology.spouts", "1"));
         int numAnalysis = Integer.parseInt(prop.getProperty("topology.analysis", "1"));
-        int numHdfs = Integer.parseInt(prop.getProperty("topology.hdfs", "1"));
+        int numHdfs = Integer.parseInt(prop.getProperty("topology.hdfs", "0"));
         int numHbase = Integer.parseInt(prop.getProperty("topology.hbase", "1"));
         int numWorker = Integer.parseInt(prop.getProperty("topology.workers", "1"));
         builder.setSpout(Constants.TWITTER_SPOUT,
                 new TwitterSpout(configPath),
                 numSpouts);
         builder.setBolt(Constants.BOLT_ANALYSIS,
-                new AnalysisBolt(configPath)
-                        .setHBaseCount(numHbase)
-                        .setHdfsCount(numHdfs),
+                new AnalysisBolt(configPath),
                 numAnalysis)
                 .shuffleGrouping(Constants.TWITTER_SPOUT);
 
+
         if (numHdfs > 0) {
-            builder.setBolt("HdfsBolt",
+            builder.setBolt(Constants.BOLT_HDFS,
                     new HdfsBolt(prop.getProperty("hdfs.path"))
                             .withSeparator(new char[]{0x01}),
                     numHdfs)
-                    .shuffleGrouping(Constants.BOLT_ANALYSIS, "hdfsStream");
+                    .shuffleGrouping(Constants.BOLT_ANALYSIS, Constants.STREAM_HDFS);
         }
-        builder.setBolt(Constants.BOLT_HBASE,
-                new HBaseBolt(),
-                numHbase)
-                .fieldsGrouping(Constants.BOLT_ANALYSIS, Constants.STREAM_HBASE,
-                        new Fields("party"));
+        if (numHbase > 0) {
+            builder.setBolt(Constants.BOLT_HBASE,
+                    new HBaseBolt(),
+                    numHbase)
+                    .shuffleGrouping(Constants.BOLT_ANALYSIS, Constants.STREAM_HBASE);
+        }
 
         // Not compatible with Heron yet!
         /**
@@ -112,15 +111,15 @@ public class Main {
 
         conf.setDebug(true);
         conf.setNumWorkers(numWorker);
-
-        LocalCluster cluster = null;
-        if (args.length > 1 && args[1].equals("debug")) {
-            cluster = new LocalCluster();
+        String name = (args.length > 1 && !org.apache.commons.lang3.StringUtils.isEmpty(args[1]))
+                ? args[1] : "TwitterAnalysis";
+        if (args.length > 2 && args[2].equals("debug")) {
+            LocalCluster cluster = new LocalCluster();
             logger.info("Debug mode!");
-            cluster.submitTopology("TwitterAnalysis", conf, builder.createTopology());
+            cluster.submitTopology(name, conf, builder.createTopology());
         } else {
             logger.info("Cluster mode!");
-            StormSubmitter.submitTopology("TwitterAnalysis", conf, builder.createTopology());
+            StormSubmitter.submitTopology(name, conf, builder.createTopology());
         }
     }
 
