@@ -8,13 +8,17 @@ import java.io.Serializable;
 import java.util.Date;
 
 public class TweetResult implements Serializable {
-    private final String party;
+    private String party;
     private double score1 = 0.0D;
     private double score2 = 0.0D;
     private double scoring;
     private double difference;
     private Tweet tweet;
-    private final String configPath;
+    private String configPath;
+
+    public TweetResult(){
+
+    }
 
     public TweetResult(double score1, double score2, double scoring, Tweet tweet, String configPath) {
         this.score1 = score1;

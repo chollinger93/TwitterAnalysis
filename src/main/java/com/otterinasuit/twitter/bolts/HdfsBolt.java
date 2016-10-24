@@ -60,10 +60,14 @@ public class HdfsBolt extends BaseRichBolt {
         try {
             fs = FileSystem.get(this.hdfsConfig);
             Path pathOut = new Path(path);
-            //recOutputWriter = fs.create(pathOut);
+            if (!fs.exists(pathOut)) {
+                recOutputWriter = fs.create(pathOut);
+            }
             recOutputWriter = fs.append(pathOut);
+
             writer = new PrintWriter(recOutputWriter);
         } catch (IOException e) {
+            logger.error("Error initializing HDFS!");
             collector.reportError(e);
             e.printStackTrace();
         }
@@ -75,15 +79,17 @@ public class HdfsBolt extends BaseRichBolt {
             for (Object o : tuple.getValues()) {
                 if (o != null) {
                     String col = (String) o;
-                    logger.debug("Writing col: "+col);
+                    logger.info("Writing col: " + col);
                     writer.append(col);
+                } else {
+                    logger.warn("Null value in tuple!");
                 }
                 writer.write(separator);
             }
             writer.write("\n");
             writer.flush();
-            recOutputWriter.flush();
-        } catch (IOException e) {
+            //recOutputWriter.flush();
+        } catch (Exception e) {
             collector.reportError(e);
             e.printStackTrace();
             collector.fail(tuple);
@@ -94,6 +100,17 @@ public class HdfsBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
+
+    }
+
+    @Override
+    public void cleanup(){
+        this.writer.close();
+        try {
+            this.recOutputWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 

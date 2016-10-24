@@ -1,7 +1,9 @@
 package com.otterinasuit.twitter;
 
 import com.otterinasuit.twitter.bolts.AnalysisBolt;
+import com.otterinasuit.twitter.bolts.HBaseBolt;
 import com.otterinasuit.twitter.bolts.HdfsBolt;
+import com.otterinasuit.twitter.helper.Constants;
 import com.otterinasuit.twitter.helper.PropertyHelper;
 import com.otterinasuit.twitter.objects.Tweet;
 import com.otterinasuit.twitter.objects.TweetResult;
@@ -29,7 +31,7 @@ public class Main {
         Date start = new Date();
         Config conf = new Config();
         String configPath = args[0];
-        configPath = (configPath.endsWith("/")) ? configPath.substring(0, configPath.length()-1) : configPath;
+        configPath = (configPath.endsWith("/")) ? configPath.substring(0, configPath.length() - 1) : configPath;
 
         if (args == null || args.length < 1 || StringUtils.isEmpty(args[0]))
             throw new IOException("Usage: TwitterAnalysis.jar path/to/auth/and/conf/properties");
@@ -53,23 +55,35 @@ public class Main {
         conf.registerSerialization(Tweet.class);
 
         // Create topology
-        Properties prop = PropertyHelper.getInstance(configPath+"/config.properties").getProperties();
+        Properties prop = PropertyHelper.getInstance(configPath + "/config.properties").getProperties();
         TopologyBuilder builder = new TopologyBuilder();
         int numSpouts = Integer.parseInt(prop.getProperty("topology.spouts", "1"));
         int numAnalysis = Integer.parseInt(prop.getProperty("topology.analysis", "1"));
         int numHdfs = Integer.parseInt(prop.getProperty("topology.hdfs", "1"));
-        builder.setSpout("twitterSpout",
+        int numHbase = Integer.parseInt(prop.getProperty("topology.hbase", "1"));
+        int numWorker = Integer.parseInt(prop.getProperty("topology.workers", "1"));
+        builder.setSpout(Constants.TWITTER_SPOUT,
                 new TwitterSpout(configPath),
                 numSpouts);
-        builder.setBolt("AnalysisBolt",
-                new AnalysisBolt(configPath),
+        builder.setBolt(Constants.BOLT_ANALYSIS,
+                new AnalysisBolt(configPath)
+                        .setHBaseCount(numHbase)
+                        .setHdfsCount(numHdfs),
                 numAnalysis)
-                .shuffleGrouping("twitterSpout");
-        builder.setBolt("HdfsBolt",
-                new HdfsBolt(prop.getProperty("hdfs.path"))
-                        .withSeparator(new char[]{0x01}),
-                numHdfs)
-                .fieldsGrouping("AnalysisBolt", new Fields("party"));
+                .shuffleGrouping(Constants.TWITTER_SPOUT);
+
+        if (numHdfs > 0) {
+            builder.setBolt("HdfsBolt",
+                    new HdfsBolt(prop.getProperty("hdfs.path"))
+                            .withSeparator(new char[]{0x01}),
+                    numHdfs)
+                    .shuffleGrouping(Constants.BOLT_ANALYSIS, "hdfsStream");
+        }
+        builder.setBolt(Constants.BOLT_HBASE,
+                new HBaseBolt(),
+                numHbase)
+                .fieldsGrouping(Constants.BOLT_ANALYSIS, Constants.STREAM_HBASE,
+                        new Fields("party"));
 
         // Not compatible with Heron yet!
         /**
@@ -97,8 +111,7 @@ public class Main {
 
 
         conf.setDebug(true);
-        conf.setNumWorkers(Integer.parseInt(
-                prop.getProperty("topology.workers", "1")));
+        conf.setNumWorkers(numWorker);
 
         LocalCluster cluster = null;
         if (args.length > 1 && args[1].equals("debug")) {

@@ -1,5 +1,6 @@
 package com.otterinasuit.twitter.bolts;
 
+import com.otterinasuit.twitter.helper.Constants;
 import com.otterinasuit.twitter.machinelearning.PrototypeAnalysis;
 import com.otterinasuit.twitter.machinelearning.TweetScoring;
 import com.otterinasuit.twitter.objects.Tweet;
@@ -24,6 +25,8 @@ public class AnalysisBolt extends BaseRichBolt {
     private final String configPath;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     private OutputCollector collector;
+    private static int hdfsCount = 0;
+    private static int hbaseCount = 0;
 
     public AnalysisBolt(String configPath) {
         this.configPath = configPath;
@@ -53,21 +56,36 @@ public class AnalysisBolt extends BaseRichBolt {
         // Emit as single values - this is useless big overhead, but enabled for the simple hdfs bolt
         if (result != null) {
             logger.info(result.toString());
-            final Values values = new Values(
-                    result.getTweet().getUserId() + "_" + result.getTweet().getId(),
-                    result.getParty().toString(),
-                    Double.toString(result.getScore2()),
-                    Double.toString(result.getScore1()),
-                    Double.toString(result.getScoring()),
-                    result.getTweet().getText());
-            collector.emit(values);
+            logger.info("Hdfs: {} / Hbase: {}", hdfsCount, hbaseCount);
+            if (hdfsCount > 0) {
+                final Values values = new Values(
+                        result.getTweet().getUserId() + "_" + result.getTweet().getId(),
+                        result.getParty().toString(),
+                        Double.toString(result.getScore2()),
+                        Double.toString(result.getScore1()),
+                        Double.toString(result.getScoring()),
+                        result.getTweet().getText());
+                collector.emit("hdfsStream", values);
+            }
+            //if(hbaseCount > 0) {
+            final Values values2 = new Values(
+                    result.getParty(),
+                    result);
+            logger.info("Emitting to stream {}, party: {}", Constants.STREAM_HBASE, result.getParty());
+            collector.emit(Constants.STREAM_HBASE, values2);
+            //}
+            collector.ack(tuple);
+        } else {
+            logger.warn("Result is null!");
+            collector.fail(tuple);
         }
-        collector.ack(tuple);
     }
 
     @Override
-    public void declareOutputFields(final OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declare(new Fields("key",
+    public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
+        outputFieldsDeclarer.declareStream(Constants.STREAM_HBASE, new Fields("party",
+                "tweet"));
+        outputFieldsDeclarer.declareStream("hdfsStream", new Fields("key",
                 "party",
                 "democratsScore",
                 "republicansScore",
@@ -75,5 +93,13 @@ public class AnalysisBolt extends BaseRichBolt {
                 "tweet"));
     }
 
+    public AnalysisBolt setHdfsCount(int count) {
+        this.hdfsCount = count;
+        return this;
+    }
 
+    public AnalysisBolt setHBaseCount(int count) {
+        this.hbaseCount = count;
+        return this;
+    }
 }
